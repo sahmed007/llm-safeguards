@@ -1,28 +1,13 @@
-import faicons as fa
 import seaborn as sns
 
 # Load data and compute static values
-from shared import app_dir, applicants
+from shared import app_dir, applicants, categorize_education, ICONS
 
 from shiny import reactive, render
 from shiny.express import input, ui
 
 
-def categorize_education(edu_str):
-    if "BS" in edu_str or "Bachelor" in edu_str:
-        return "Bachelor's"
-    elif "MS" in edu_str or "Master" in edu_str:
-        return "Master's"
-    elif "PhD" in edu_str:
-        return "PhD"
-    elif "BE" in edu_str:
-        return "BE"
-    else:
-        return "Other"
-
-
 applicants["education_level"] = applicants["education"].apply(categorize_education)
-
 
 experience_rng = (
     min(applicants.years_of_experience),
@@ -47,72 +32,72 @@ with ui.sidebar(open="desktop"):
         selected=applicants.education_level.unique().tolist(),
         inline=True,
     )
-    ui.input_action_button("reset", "Reset filter")
+    ui.input_action_button("reset", "Reset filters")
 
-# Add main content
-ICONS = {
-    "user": fa.icon_svg("user", "regular"),
-    "briefcase": fa.icon_svg("briefcase"),
-    "graduation-cap": fa.icon_svg("graduation-cap"),
-    "ellipsis": fa.icon_svg("ellipsis"),
-}
+with ui.navset_pill(id="tab"):
+    with ui.nav_panel("Overview"):
+        # Analytics Overview Cards
+        with ui.layout_columns(fill=False):
+            with ui.value_box(showcase=ICONS["user"]):
+                "Total applicants"
 
-with ui.layout_columns(fill=False):
-    with ui.value_box(showcase=ICONS["user"]):
-        "Total applicants"
+                @render.express
+                def total_applicants():
+                    applicants_data().shape[0]
 
-        @render.express
-        def total_applicants():
-            applicants_data().shape[0]
+            with ui.value_box(showcase=ICONS["briefcase"]):
+                "Average experience"
 
-    with ui.value_box(showcase=ICONS["briefcase"]):
-        "Average experience"
+                @render.express
+                def average_experience():
+                    d = applicants_data()
+                    if d.shape[0] > 0:
+                        avg_exp = d.years_of_experience.mean()
+                        f"{avg_exp:.1f} years"
 
-        @render.express
-        def average_experience():
-            d = applicants_data()
-            if d.shape[0] > 0:
-                avg_exp = d.years_of_experience.mean()
-                f"{avg_exp:.1f} years"
+            with ui.value_box(showcase=ICONS["graduation-cap"]):
+                "Most common education level"
 
-    with ui.value_box(showcase=ICONS["graduation-cap"]):
-        "Most common education level"
+                @render.express
+                def common_education():
+                    d = applicants_data()
+                    if d.shape[0] > 0:
+                        common_edu = d.education.mode()[0]
+                        common_edu
 
-        @render.express
-        def common_education():
-            d = applicants_data()
-            if d.shape[0] > 0:
-                common_edu = d.education.mode()[0]
-                common_edu
+        # Education Plot
+        with ui.layout_columns(col_widths=12):
+            with ui.card(full_screen=True):
+                with ui.card_header(
+                    class_="d-flex justify-content-between align-items-center"
+                ):
+                    "Experience vs Education"
+                    with ui.popover(title="Add a color variable", placement="top"):
+                        ICONS["ellipsis"]
+                        ui.input_radio_buttons(
+                            "scatter_color",
+                            None,
+                            ["none", "education", "company"],
+                            inline=True,
+                        )
 
+                @render.plot(alt="Number of candidates per education level.")
+                def histplot():
+                    ax = sns.histplot(data=applicants_data(), x="education_level")
+                    ax.set_title("Candidate by Degree Level")
+                    ax.set_xlabel("Degree Level")
+                    ax.set_ylabel("Number of Candidates")
+                    return ax
 
-with ui.layout_columns(col_widths=12):
-    with ui.card(full_screen=True):
-        ui.card_header("Applicant data")
+    # Applicants Datagrid Explorer
+    with ui.nav_panel("Applicants Explorer"):
+        with ui.layout_columns(col_widths=12):
+            with ui.card(full_screen=True):
+                ui.card_header("Applicant data")
 
-        @render.data_frame
-        def table():
-            return render.DataGrid(applicants_data())
-
-    with ui.card(full_screen=True):
-        with ui.card_header(class_="d-flex justify-content-between align-items-center"):
-            "Experience vs Education"
-            with ui.popover(title="Add a color variable", placement="top"):
-                ICONS["ellipsis"]
-                ui.input_radio_buttons(
-                    "scatter_color",
-                    None,
-                    ["none", "education", "company"],
-                    inline=True,
-                )
-
-        @render.plot(alt="Number of candidates per education level.")
-        def histplot():
-            ax = sns.histplot(data=applicants_data(), x="education_level")
-            ax.set_title("Candidate by Degree Level")
-            ax.set_xlabel("Degree Level")
-            ax.set_ylabel("Number of Candidates")
-            return ax
+                @render.data_frame
+                def table():
+                    return render.DataGrid(applicants_data())
 
 
 ui.include_css(app_dir / "styles.css")
