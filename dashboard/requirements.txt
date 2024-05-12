@@ -1,6 +1,7 @@
 faicons
 shiny
 shinywidgets
+seaborn
 plotly
 pandas
 ridgeplot

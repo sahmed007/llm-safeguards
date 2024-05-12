@@ -1,12 +1,28 @@
 import faicons as fa
-import plotly.express as px
+import seaborn as sns
 
 # Load data and compute static values
 from shared import app_dir, applicants
-from shinywidgets import render_plotly
 
 from shiny import reactive, render
 from shiny.express import input, ui
+
+
+def categorize_education(edu_str):
+    if "BS" in edu_str or "Bachelor" in edu_str:
+        return "Bachelor's"
+    elif "MS" in edu_str or "Master" in edu_str:
+        return "Master's"
+    elif "PhD" in edu_str:
+        return "PhD"
+    elif "BE" in edu_str:
+        return "BE"
+    else:
+        return "Other"
+
+
+applicants["education_level"] = applicants["education"].apply(categorize_education)
+
 
 experience_rng = (
     min(applicants.years_of_experience),
@@ -25,10 +41,10 @@ with ui.sidebar(open="desktop"):
         value=experience_rng,
     )
     ui.input_checkbox_group(
-        "education",
+        "education_level",
         "Education Level",
-        applicants.education.unique().tolist(),
-        selected=applicants.education.unique().tolist(),
+        applicants.education_level.unique().tolist(),
+        selected=applicants.education_level.unique().tolist(),
         inline=True,
     )
     ui.input_action_button("reset", "Reset filter")
@@ -90,15 +106,13 @@ with ui.layout_columns(col_widths=12):
                     inline=True,
                 )
 
-        @render_plotly
-        def boxplot():
-            color = input.scatter_color()
-            return px.box(
-                applicants_data(),
-                x="years_of_experience",
-                y="education",
-                color=None if color == "none" else color,
-            )
+        @render.plot(alt="Number of candidates per education level.")
+        def histplot():
+            ax = sns.histplot(data=applicants_data(), x="education_level")
+            ax.set_title("Candidate by Degree Level")
+            ax.set_xlabel("Degree Level")
+            ax.set_ylabel("Number of Candidates")
+            return ax
 
 
 ui.include_css(app_dir / "styles.css")
@@ -112,7 +126,7 @@ ui.include_css(app_dir / "styles.css")
 def applicants_data():
     exp = input.years_of_experience()
     idx1 = applicants.years_of_experience.between(exp[0], exp[1])
-    idx2 = applicants.education.isin(input.education())
+    idx2 = applicants.education_level.isin(input.education_level())
     return applicants[idx1 & idx2]
 
 
