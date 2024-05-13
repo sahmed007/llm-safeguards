@@ -1,3 +1,5 @@
+import sqlite3
+import pandas as pd
 import seaborn as sns
 
 # Load data and compute static values
@@ -6,6 +8,22 @@ from shared import app_dir, applicants, categorize_education, ICONS
 from shiny import reactive, render
 from shiny.express import input, ui
 
+
+def load_data_to_sqlite(db_name, table_name, csv_file):
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    cursor.execute(
+        f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';"
+    )
+    table_exists = cursor.fetchone() is not None
+    if not table_exists:
+        df = pd.read_csv(csv_file)
+        df.to_sql(table_name, conn, if_exists="replace", index=False)
+
+    return conn
+
+
+con = load_data_to_sqlite("applicants.db", "applicants", app_dir / "applicants.csv")
 
 applicants["education_level"] = applicants["education"].apply(categorize_education)
 
@@ -34,7 +52,7 @@ with ui.sidebar(open="desktop"):
     )
     ui.input_action_button("reset", "Reset filters")
 
-with ui.navset_pill(id="tab"):
+with ui.navset_tab(id="tab"):
     # Overview Tab
     with ui.nav_panel("Overview"):
         # Analytics Overview Cards
@@ -102,8 +120,34 @@ with ui.navset_pill(id="tab"):
 
     # AI Query Tab
     with ui.nav_panel("AI Query"):
+        # AI Query Input
         with ui.layout_columns(col_widths=12):
-            pass
+            with ui.card():
+                ui.card_header("AI Query Assistant")
+                ui.input_text_area(
+                    "textarea",
+                    "Ask a question...",
+                    "How many candidates do I have for this role?",
+                    width="100%",
+                    rows=4,
+                )
+                with ui.layout_columns(fill=False):
+                    ui.input_action_button(
+                        "meta", "Show metadata", class_="btn-secondary"
+                    )
+                    ui.input_action_button("submit", "Submit", class_="btn-primary")
+
+        # AI Query Output
+        with ui.layout_columns(col_widths=12):
+            with ui.card():
+                ui.card_header("AI Query Results")
+
+                @render.data_frame
+                @reactive.event(input.submit)
+                def query_result():
+                    qry = input.textarea().replace("\n", " ")
+                    df = pd.read_sql_query(qry, con)
+                    return df
 
 
 ui.include_css(app_dir / "styles.css")
