@@ -1,26 +1,11 @@
-import sqlite3
 import pandas as pd
 import seaborn as sns
 
 # Load data and compute static values
-from shared import app_dir, applicants, categorize_education, ICONS
+from shared import app_dir, applicants, categorize_education, ICONS, load_data_to_sqlite
 
 from shiny import reactive, render
 from shiny.express import input, ui
-
-
-def load_data_to_sqlite(db_name, table_name, csv_file):
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
-    cursor.execute(
-        f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';"
-    )
-    table_exists = cursor.fetchone() is not None
-    if not table_exists:
-        df = pd.read_csv(csv_file)
-        df.to_sql(table_name, conn, if_exists="replace", index=False)
-
-    return conn
 
 
 con = load_data_to_sqlite("applicants.db", "applicants", app_dir / "applicants.csv")
@@ -146,6 +131,13 @@ with ui.navset_tab(id="tab"):
                 @reactive.event(input.submit)
                 def query_result():
                     qry = input.textarea().replace("\n", " ")
+                    df = pd.read_sql_query(qry, con)
+                    return df
+
+                @render.data_frame
+                @reactive.event(input.meta)
+                def show_metadata():
+                    qry = "PRAGMA table_info(applicants);"
                     df = pd.read_sql_query(qry, con)
                     return df
 
