@@ -35,6 +35,7 @@ with ui.sidebar(open="desktop"):
     ui.input_action_button("reset", "Reset filters")
 
 with ui.navset_pill(id="tab"):
+    # Overview Tab
     with ui.nav_panel("Overview"):
         # Analytics Overview Cards
         with ui.layout_columns(fill=False):
@@ -89,7 +90,7 @@ with ui.navset_pill(id="tab"):
                     ax.set_ylabel("Number of Candidates")
                     return ax
 
-    # Applicants Datagrid Explorer
+    # Applicants Explorer Tab
     with ui.nav_panel("Applicants Explorer"):
         with ui.layout_columns(col_widths=12):
             with ui.card(full_screen=True):
@@ -98,6 +99,11 @@ with ui.navset_pill(id="tab"):
                 @render.data_frame
                 def table():
                     return render.DataGrid(applicants_data())
+
+    # AI Query Tab
+    with ui.nav_panel("AI Query"):
+        with ui.layout_columns(col_widths=12):
+            pass
 
 
 ui.include_css(app_dir / "styles.css")
