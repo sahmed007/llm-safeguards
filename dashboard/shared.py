@@ -35,6 +35,13 @@ def load_data_to_sqlite(db_name, table_name, csv_file):
 app_dir = Path(__file__).parent
 applicants = pd.read_csv(app_dir / "applicants.csv")
 
+applicants["education_level"] = applicants["education"].apply(categorize_education)
+
+experience_rng = (
+    min(applicants.years_of_experience),
+    max(applicants.years_of_experience),
+)
+
 ICONS = {
     "user": fa.icon_svg("user", "regular"),
     "briefcase": fa.icon_svg("briefcase"),

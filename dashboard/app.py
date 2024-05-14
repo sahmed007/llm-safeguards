@@ -2,20 +2,13 @@ import pandas as pd
 import seaborn as sns
 
 # Load data and compute static values
-from shared import app_dir, applicants, categorize_education, ICONS, load_data_to_sqlite
+from shared import app_dir, applicants, experience_rng, load_data_to_sqlite, ICONS
 
 from shiny import reactive, render
 from shiny.express import input, ui
 
 
 con = load_data_to_sqlite("applicants.db", "applicants", app_dir / "applicants.csv")
-
-applicants["education_level"] = applicants["education"].apply(categorize_education)
-
-experience_rng = (
-    min(applicants.years_of_experience),
-    max(applicants.years_of_experience),
-)
 
 # Add page title and sidebar
 ui.page_opts(title="Applicant Data", fillable=True)
@@ -35,7 +28,7 @@ with ui.sidebar(open="desktop"):
         selected=applicants.education_level.unique().tolist(),
         inline=True,
     )
-    ui.input_action_button("reset", "Reset filters")
+    ui.input_action_button("reset", "Reset filters", class_="btn-tertiary rounded-3")
 
 with ui.navset_tab(id="tab"):
     # Overview Tab
@@ -118,9 +111,11 @@ with ui.navset_tab(id="tab"):
                 )
                 with ui.layout_columns(fill=False):
                     ui.input_action_button(
-                        "meta", "Show metadata", class_="btn-secondary"
+                        "meta", "Show metadata", class_="btn-secondary rounded-3"
                     )
-                    ui.input_action_button("submit", "Submit", class_="btn-primary")
+                    ui.input_action_button(
+                        "submit", "Submit", class_="btn-success rounded-3"
+                    )
 
         # AI Query Output
         with ui.layout_columns(col_widths=12):
