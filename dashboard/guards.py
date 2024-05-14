@@ -60,14 +60,32 @@ guards = Guard().use_many(
     ValidSQL(on_fail="invalid_sql_exception"),
 )
 
-try:
-    completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": "How many applicants do I have for this role?"},
-        ],
-    )
-    print(completion.choices[0].message.content)
-except Exception as e:
-    print(e)
+
+user_query = "How many candidates do I have for this role?"
+
+
+def generate_sql_query(user_query):
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_query},
+            ],
+        )
+        generated_query = completion.choices[0].message.content
+        validation = guards.validate(generated_query)
+        """
+        Produces:
+            ValidationOutcome(
+            raw_llm_output='SELECT COUNT(*) FROM applicants;',
+            validated_output='SELECT COUNT(*) FROM applicants;',
+            reask=None,
+            validation_passed=True,
+            error=None
+        )
+        """
+        return validation.validated_output
+    except Exception as e:
+        print(e)
+        return None

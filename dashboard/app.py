@@ -2,6 +2,7 @@ import pandas as pd
 import seaborn as sns
 
 # Load data and compute static values
+from guards import generate_sql_query
 from shared import app_dir, applicants, experience_rng, load_data_to_sqlite, ICONS
 
 from shiny import reactive, render
@@ -125,9 +126,13 @@ with ui.navset_tab(id="tab"):
                 @render.data_frame
                 @reactive.event(input.submit)
                 def query_result():
-                    qry = input.textarea().replace("\n", " ")
-                    df = pd.read_sql_query(qry, con)
+                    natural_language_query = input.textarea().replace("\n", " ")
+                    query = generate_sql_query(natural_language_query)
+                    df = pd.read_sql_query(query, con)
                     return df
+
+            with ui.card():
+                ui.card_header("Table Metadata")
 
                 @render.data_frame
                 @reactive.event(input.meta)
